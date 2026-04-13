@@ -41,15 +41,21 @@ function linkGithubMentions(markdown: string): string {
         return match
       }
 
-      return `${prefix}<https://github.com/${username}|@${username}>`
+      return `${prefix}[@${username}](https://github.com/${username})`
     }
   )
 }
 
 function replacePullRequestUrls(markdown: string): string {
   return markdown.replace(
-    /https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/(\d+)/g,
-    (url: string, pullRequestNumber: string) => `<${url}|#${pullRequestNumber}>`
+    /<?(https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/(\d+))>?/g,
+    (match: string, url: string, pullRequestNumber: string) => {
+      if (match.startsWith('[')) {
+        return match
+      }
+
+      return `[#${pullRequestNumber}](${url})`
+    }
   )
 }
 

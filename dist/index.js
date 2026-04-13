@@ -37,11 +37,16 @@ function linkGithubMentions(markdown) {
         if (prefix === '[') {
             return match;
         }
-        return `${prefix}<https://github.com/${username}|@${username}>`;
+        return `${prefix}[@${username}](https://github.com/${username})`;
     });
 }
 function replacePullRequestUrls(markdown) {
-    return markdown.replace(/https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/(\d+)/g, (url, pullRequestNumber) => `<${url}|#${pullRequestNumber}>`);
+    return markdown.replace(/<?(https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/(\d+))>?/g, (match, url, pullRequestNumber) => {
+        if (match.startsWith('[')) {
+            return match;
+        }
+        return `[#${pullRequestNumber}](${url})`;
+    });
 }
 function formatReleaseBody(markdown) {
     return linkGithubMentions(replacePullRequestUrls(markdown));
