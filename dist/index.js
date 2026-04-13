@@ -22,24 +22,56 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.notifyChangelog = void 0;
 const axios_1 = __importDefault(__nccwpck_require__(6545));
 const mack_1 = __nccwpck_require__(4260);
+const SMALL_BOAT_EMOJIS = ['⛵', '🛶', '🚤'];
+const BIG_BOAT_EMOJIS = ['⛴️', '🚢', '🛳️'];
+function chooseReleaseEmoji(releaseBody) {
+    var _a;
+    const lineCount = releaseBody.split('\n').length;
+    const pullRequestCount = ((_a = releaseBody.match(/\/pull\/\d+/g)) !== null && _a !== void 0 ? _a : []).length;
+    const isBigRelease = releaseBody.length >= 1800 || lineCount >= 30 || pullRequestCount >= 10;
+    const emojiPool = isBigRelease ? BIG_BOAT_EMOJIS : SMALL_BOAT_EMOJIS;
+    return emojiPool[Math.floor(Math.random() * emojiPool.length)];
+}
+function linkGithubMentions(markdown) {
+    return markdown.replace(/(^|[\s(,.:;!?])@([a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38})\b/gi, (match, prefix, username) => {
+        if (prefix === '[') {
+            return match;
+        }
+        return `${prefix}[@${username}](https://github.com/${username})`;
+    });
+}
+function replacePullRequestUrls(markdown) {
+    return markdown.replace(/<?(https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/(\d+))>?/g, (match, url, pullRequestNumber) => {
+        if (match.startsWith('[')) {
+            return match;
+        }
+        return `[#${pullRequestNumber}](${url})`;
+    });
+}
+function formatReleaseBody(markdown) {
+    return linkGithubMentions(replacePullRequestUrls(markdown));
+}
 function notifyChangelog({ slackWebhookUrl, release, repo }) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
+        const formattedReleaseBody = formatReleaseBody((_a = release.body) !== null && _a !== void 0 ? _a : '');
+        const releaseEmoji = chooseReleaseEmoji(formattedReleaseBody);
         const introBlock = {
             type: 'header',
             text: {
                 type: 'plain_text',
-                text: `🎉 [CHANGELOG]: ${release.name}`
+                text: `${releaseEmoji} ${release.name}`
             }
         };
         const linkBlock = {
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: `<${release.html_url}>`
+                text: `<${release.html_url}|Release details>`
             }
         };
         const dividerBlock = { type: 'divider' };
-        const bodyBlocks = yield (0, mack_1.markdownToBlocks)(release.body);
+        const bodyBlocks = yield (0, mack_1.markdownToBlocks)(formattedReleaseBody);
         return yield axios_1.default.post(slackWebhookUrl, {
             text: `${release.name} has been released in ${repo.owner}/${repo.repo}`,
             blocks: [introBlock, linkBlock, dividerBlock, ...bodyBlocks]
