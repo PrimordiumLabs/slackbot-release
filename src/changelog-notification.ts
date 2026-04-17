@@ -1,4 +1,4 @@
-import type {Block, DividerBlock, HeaderBlock, SectionBlock} from '@slack/types'
+import type {Block, HeaderBlock, SectionBlock} from '@slack/types'
 import type {OauthV2AccessResponse} from '@slack/web-api/dist/response'
 import axios from 'axios'
 import {markdownToBlocks} from '@instantish/mack'
@@ -59,8 +59,17 @@ function replacePullRequestUrls(markdown: string): string {
   )
 }
 
+function removeFullChangelogLine(markdown: string): string {
+  return markdown
+    .split('\n')
+    .filter(line => !/\*\*Full Changelog\*\*/i.test(line))
+    .join('\n')
+}
+
 function formatReleaseBody(markdown: string): string {
-  return linkGithubMentions(replacePullRequestUrls(markdown))
+  return linkGithubMentions(
+    replacePullRequestUrls(removeFullChangelogLine(markdown))
+  )
 }
 
 export async function notifyChangelog({
@@ -84,12 +93,11 @@ export async function notifyChangelog({
       text: `<${release.html_url}|Release details>`
     }
   }
-  const dividerBlock: DividerBlock = {type: 'divider'}
 
   const bodyBlocks: Block[] = await markdownToBlocks(formattedReleaseBody)
 
   return await axios.post(slackWebhookUrl, {
     text: `${release.name} has been released in ${repo.owner}/${repo.repo}`,
-    blocks: [introBlock, linkBlock, dividerBlock, ...bodyBlocks]
+    blocks: [introBlock, ...bodyBlocks, linkBlock]
   })
 }

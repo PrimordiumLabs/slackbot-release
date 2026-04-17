@@ -48,8 +48,14 @@ function replacePullRequestUrls(markdown) {
         return `[#${pullRequestNumber}](${url})`;
     });
 }
+function removeFullChangelogLine(markdown) {
+    return markdown
+        .split('\n')
+        .filter(line => !/\*\*Full Changelog\*\*/i.test(line))
+        .join('\n');
+}
 function formatReleaseBody(markdown) {
-    return linkGithubMentions(replacePullRequestUrls(markdown));
+    return linkGithubMentions(replacePullRequestUrls(removeFullChangelogLine(markdown)));
 }
 function notifyChangelog({ slackWebhookUrl, release, repo }) {
     var _a;
@@ -70,11 +76,10 @@ function notifyChangelog({ slackWebhookUrl, release, repo }) {
                 text: `<${release.html_url}|Release details>`
             }
         };
-        const dividerBlock = { type: 'divider' };
         const bodyBlocks = yield (0, mack_1.markdownToBlocks)(formattedReleaseBody);
         return yield axios_1.default.post(slackWebhookUrl, {
             text: `${release.name} has been released in ${repo.owner}/${repo.repo}`,
-            blocks: [introBlock, linkBlock, dividerBlock, ...bodyBlocks]
+            blocks: [introBlock, ...bodyBlocks, linkBlock]
         });
     });
 }
